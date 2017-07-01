@@ -1,0 +1,6 @@
+<launch>   
+
+	<node pkg="tf" type="static_transform_publisher" name="depth_sensor" args="0 0 0 0 0 1.22 kinect_depth_optical_frame kinect_depthSensor 100"/>
+	<node pkg="tf" type="static_transform_publisher" name="vision_sensor" args="0 0 0 0 0 1.22 kinect_rgb_optical_frame kinect_visionSensor 100"/>
+
+</launch>

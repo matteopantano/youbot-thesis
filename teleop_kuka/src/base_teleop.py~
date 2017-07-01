@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+###################  import  ###########################
+import rospy 
+from sensor_msgs.msg import Joy		#joystick message type
+from geometry_msgs.msg import Twist	#rover message type
+
+############# creation of objects  #####################
+distance=Twist()
+
+#############  node initialization  ####################
+rospy.init_node('teleop', anonymous=True)
+
+##### initialize values ####
+distance.linear.x = 0
+distance.linear.y= 0	
+distance.angular.z = 0
+
+############ definitions of functions ##################
+def callback(data):
+	global distance				   #variable to pass values to publisher
+	rospy.loginfo(data)				   			#output data to terminal
+	distance.linear.x=data.axes[1]
+        distance.linear.y=data.axes[0]
+	distance.angular.z=data.axes[2]
+
+#### definition of publisher/subscriber and services ###
+rospy.Subscriber("joy", Joy, callback)		#Subscriber from Joystick
+pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)	#publisher to Rover
+
+############# main program #############################
+rate = rospy.Rate(10)
+
+#--------------endless loop till shut down -------------#
+while not rospy.is_shutdown():
+	pub.publish(distance)		#publish data to rover					
+	rate.sleep()

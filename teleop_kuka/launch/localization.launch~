@@ -1,0 +1,7 @@
+<launch>
+
+	<include file="$(find teleop_kuka)/launch/lsm.launch"/>
+	<include file="$(find teleop_kuka)/launch/amcl.launch"/>
+	<include file="$(find kuka_nav)/launch/move_base.launch"/>
+
+</launch>

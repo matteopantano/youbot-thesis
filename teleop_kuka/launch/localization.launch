@@ -1,0 +1,7 @@
+<launch>
+
+	<include file="$(find teleop_kuka)/launch/lsm.launch"/>
+	<include file="$(find teleop_kuka)/launch/amcl.launch"/>
+	<!--<include file="$(find youbot_navigation_local)/launch/move_base_local.launch"/>-->
+
+</launch>

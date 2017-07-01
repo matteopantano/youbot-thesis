@@ -1,0 +1,5 @@
+<launch>   
+
+	<node pkg="tf" type="static_transform_publisher" name="depth_sensor" args="0 0 0 0 0 1.57 aruco_marker_frame aruco 100"/>
+
+</launch>

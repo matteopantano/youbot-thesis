@@ -1,0 +1,14 @@
+<launch>
+
+  <arg name="arm_name" default="arm"/>
+
+  <!-- upload arm and gripper controller parameters -->
+  <rosparam file="$(find kuka_arm_cmd)/config/$(arg arm_name)_controller.yaml" command="load" ns="$(arg arm_name)"/> 
+ 
+  <!-- spawn arm controller -->
+  <node pkg="controller_manager" type="spawner" name="$(arg arm_name)_arm_controller_spawner"  args="/$(arg arm_name)_controller" respawn="false" output="screen" />
+
+  <!-- spawn gripper controller -->
+  <node pkg="controller_manager" type="spawner" name="$(arg arm_name)_gripper_controller_spawner"  args="/gripper_controller" respawn="false" output="screen" />
+   
+</launch>

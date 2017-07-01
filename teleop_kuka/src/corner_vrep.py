@@ -1,0 +1,197 @@
+#!/usr/bin/python
+
+import roslib
+import rospy
+import cv2
+import cv2.cv as cv
+import sys
+from std_msgs.msg import String
+from sensor_msgs.msg import Image, RegionOfInterest, CameraInfo
+from cv_bridge import CvBridge, CvBridgeError
+import time
+import numpy as np
+import imutils
+import tf
+import math
+import logging
+
+
+blueLower = (110, 50, 50)
+blueUpper = (130, 255, 255)
+
+objp = np.array([[0, 0, 0],[1, 0, 0],[1, 1, 0],[0, 1, 0]], np.float32)
+
+mtx = np.matrix([[532.80990766, 0.0, 342.49522241],
+      [0.0, 532.93344824, 233.88792572],
+      [0.0, 0.0, 1.0]], np.float32)
+
+dist =  np.array([ -2.81325825e-01,   2.91151879e-02,   1.21234424e-03,  -1.40823842e-04, 1.54861064e-01], np.float32)
+
+
+
+class cvBridgeDemo():
+    def __init__(self):
+        
+        rospy.init_node("blob_detection")
+        rospy.on_shutdown(self.cleanup)
+        #cv.NamedWindow("RGB Image", cv.CV_WINDOW_NORMAL)
+        #cv.MoveWindow("RGB Image", 25, 75)
+	#cv.NamedWindow("Depth Image", cv.CV_WINDOW_NORMAL)
+	#cv.MoveWindow("Depth Image", 25, 350)
+	cv.NamedWindow("Corner Image", cv.CV_WINDOW_NORMAL)
+	cv.MoveWindow("Corner Image", 25, 350)
+        
+        
+        self.bridge = CvBridge()
+        self.image_sub = rospy.Subscriber("/kinect/rgbimage/image_raw", Image, self.image_callback)
+	self.image_sub = rospy.Subscriber("/kinect/depthimage/image_raw", Image, self.depth_callback)
+        
+        rospy.loginfo("Waiting for image topics...")
+
+    def image_callback(self, ros_image):
+        try:
+            frame = self.bridge.imgmsg_to_cv2(ros_image, "bgr8")
+        except CvBridgeError, e:
+            print e
+        
+        frame = np.array(frame, dtype=np.uint8)
+        
+        #display_image = self.process_image(frame)
+	display_corner = self.process_corner(frame)
+                       
+        #cv2.imshow("RGB Image", display_image)
+	cv2.imshow("Corner Image", display_corner)
+        
+        self.keystroke = cv.WaitKey(5)
+        if 32 <= self.keystroke and self.keystroke < 128:
+            cc = chr(self.keystroke).lower()
+            if cc == 'q':
+                rospy.signal_shutdown("User hit q key to quit.")
+                
+            
+    def process_image(self, frame):
+         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+   	 mask = cv2.inRange(hsv, blueLower, blueUpper)
+         mask = cv2.erode(mask, None, iterations=2)
+   	 mask = cv2.dilate(mask, None, iterations=2)
+
+    	 cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    	 #self.center = None
+
+    	 #if len(cnts) > 0:
+		#c = max(cnts, key=cv2.contourArea)
+		#((x, y), radius) = cv2.minEnclosingCircle(c)
+		#M = cv2.moments(c)
+		#self.center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+		#if radius > 2:
+			#cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 255), 2)
+			#cv2.circle(frame, self.center, 5, (0, 0, 255), -1)
+
+         return frame
+
+
+
+    def process_corner(self, frame):
+
+	gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+	hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+	mask = cv2.inRange(hsv, blueLower, blueUpper)
+	mask = cv2.erode(mask, None, iterations=2)
+   	mask = cv2.dilate(mask, None, iterations=2)
+	#blur = cv2.GaussianBlur(gray,(5,5),0)
+	#edges = cv2.Canny(blur,100,200)
+
+	#ret,thresh = cv2.threshold(edges,127,255,0)
+	contours, hierarchy = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+	cnt = contours[0]
+	epsilon = 0.1 * cv2.arcLength(cnt, True)
+	approx = cv2.approxPolyDP(cnt, epsilon, True)
+	#print(approx)
+	if len(contours) > 0:
+		# compute the center of the contour
+		c = max(contours, key=cv2.contourArea)
+		M = cv2.moments(c)
+		cX = int(M["m10"] / M["m00"])
+		cY = int(M["m01"] / M["m00"])
+		cv2.circle(frame, (cX, cY), 7, (255, 255, 255), -1)
+		self.center = (cX, cY)	
+		print(self.center)
+		self.found = 1
+
+	p0 = approx[0][0] #where we calculate the angle
+	p1 = approx[3][0] #second corner of the square
+	p2 = ([p0[0]+1],[p0[1]]) #horizontal reference
+
+	dx1 = p1[0] - p0[0]
+	dy1 = p1[1] - p0[1]
+
+	dx2 = p2[0] - p0[0]
+	dy2 = p2[1] - p0[1]
+
+	x = (dx1*dx2 + dy1*dy2)/math.sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2))
+
+	self.angle = math.acos(x)
+	
+	#print(self.angle)
+
+	cv2.drawContours(frame, approx, -1, (0,255,0), 10)
+
+	return frame
+
+
+
+    
+    def depth_callback(self, ros_image):
+	try:
+		depth_image = self.bridge.imgmsg_to_cv2(ros_image,"16UC1")
+		
+        except CvBridgeError, e:
+            	print e
+		
+	depth_display_image = self.process_depth_image(depth_image)
+	self.found = 0
+
+	#cv2.imshow("Depth Image", depth_image)	
+
+
+    def process_depth_image(self, frame):
+	u = self.center[1]
+	v = self.center[0]
+	depth = frame[u,v] # meters
+	depth = depth / 1000.0
+	#print(self.center, depth) 
+	fx = 589.3667059626796
+	fy = 589.3667059626796
+	cx = 320
+	cy = 240
+        x = (depth / fx)*(v - cx)
+      	y = (depth / fy)*(u - cy)
+	z = depth
+
+
+	print(x,y,z,self.angle)
+	if self.found == 1:
+		print("--TROVATO--")
+		br = tf.TransformBroadcaster()
+		br.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,self.angle), rospy.Time.now(), "box", "kinect_depthSensor")
+	
+	return frame
+
+
+    def cleanup(self):
+        print "Shutting down vision node."
+        cv2.destroyAllWindows()   
+   
+ 
+def main(args):       
+    logging.disable(logging.CRITICAL)
+    try:
+        cvBridgeDemo()
+        rospy.spin()
+    except KeyboardInterrupt:
+        print "Shutting down vision node."
+        cv.DestroyAllWindows()
+
+if __name__ == '__main__':
+	main(sys.argv)

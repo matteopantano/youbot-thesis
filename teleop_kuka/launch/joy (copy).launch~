@@ -1,0 +1,6 @@
+<launch>
+
+	<node pkg="joy" name="joy_node" type="joy_node" />
+	<node pkg="teleop_kuka" name="teleop" type="teleop.py" />
+
+</launch>

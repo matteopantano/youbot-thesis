@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+
+import rospy
+import std_msgs.msg
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+from brics_actuator.msg import JointPositions, JointValue, JointVelocities
+import sys
+import copy
+import numpy as np
+import math
+import time
+import logging
+import moveit_commander
+import moveit_msgs.msg
+
+class arm_kinematics:
+		
+	def __init__(self):
+  		moveit_commander.roscpp_initialize(sys.argv)
+		rospy.init_node('arm_kinematics', anonymous = False)
+		self.armPub = rospy.Publisher('/arm_controller/position_command', JointPositions, queue_size=10)
+		self.gripPub = rospy.Publisher('/gripper_controller/position_command', JointPositions, queue_size=10)
+		rospy.Subscriber('/box_pose', Pose, self.kinematics)
+ 		robot = moveit_commander.RobotCommander()
+ 		scene = moveit_commander.PlanningSceneInterface()
+  		self.group = moveit_commander.MoveGroupCommander("arm_1")
+  		self.group.set_goal_position_tolerance(0.01)
+  		self.group.set_goal_orientation_tolerance(0.01)
+		
+		self.jointHome = [3.0, 1.25, -1, 2.8, 3.07]
+		self.openGripper = 0.0114
+		self.closeGripper = 0.0012
+		self.uri = 0
+		self.value = [0 for i in range(6)]
+
+	def movegripper(self, value):
+		jh = JointPositions()
+		jg = JointValue()
+            	jg.joint_uri = "gripper_finger_joint_r"
+            	jg.unit = "m"
+            	jg.value = value
+            	jh.positions.append(jg)
+		self.gripPub.publish(jh)
+		rospy.sleep(0.2)
+            	jg.joint_uri = "gripper_finger_joint_l"
+            	jg.value = value
+            	jh.positions.append(jg)
+		self.gripPub.publish(jh)
+
+	def movearm(self, value):
+		jp = JointPositions()	
+		for i in range(5):
+			jv = JointValue()
+			jv.joint_uri = "arm_joint_" + str(i + 1)
+			jv.unit = "rad"
+			jv.value = value[i]
+			jp.positions.append(jv)
+
+		rospy.sleep(0.5)
+		self.armPub.publish(jp)
+
+	def kinematics(self, pose):
+		
+		pose_target = Pose()
+
+		pose_target.orientation.x = pose.orientation.x
+  		pose_target.orientation.y = pose.orientation.y
+  		pose_target.orientation.z = pose.orientation.z
+  		pose_target.orientation.w = pose.orientation.w
+		
+		# adjust above cube
+  		pose_target.position.x = pose.position.x + 0.0125
+  		pose_target.position.y = pose.position.y + 0.0175
+  		pose_target.position.z = pose.position.z + 0.04
+
+  		self.group.set_pose_target(pose_target)
+  		
+		plan1 = self.group.plan()
+  		#print(plan1.joint_trajectory.points[-1].positions)
+
+  		self.group.go(wait=True)
+
+		self.value[:] = plan1.joint_trajectory.points[-1].positions
+
+		print(self.value)
+		
+		# gripper opening
+		self.movegripper(self.openGripper)
+
+		# above grasp
+		self.movearm(self.value)
+		
+		print("--- ABOVE GRASP ")
+
+		rospy.sleep(1)
+		
+		# adjust for grasping
+  		pose_target.position.z = pose.position.z 
+
+  		self.group.set_pose_target(pose_target)
+  		
+		plan1 = self.group.plan()
+
+  		self.group.go(wait=True)
+
+		self.value[:] = plan1.joint_trajectory.points[-1].positions
+
+		self.movearm(self.value)
+		print("--- ON CUBE ")
+
+		rospy.sleep(1)
+
+		self.movegripper(self.closeGripper)
+		print("--- CLOSED GRIPPER ")	
+
+		rospy.sleep(0.2)
+
+		# home position with object
+		self.movearm(self.jointHome)
+		print("--- HOME POSITION ")	
+
+		moveit_commander.roscpp_shutdown()
+
+def main(args):
+	arm_kinematics()
+	logging.disable(logging.CRITICAL)
+	try:		
+		rospy.spin()
+	except KeyboardInterrupt:
+        	print("Shutting down")
+
+if __name__ == '__main__':
+	main(sys.argv)
