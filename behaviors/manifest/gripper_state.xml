@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<behavior name="Gripper_State">
+
+	<executable package_path="flexbe_behaviors.gripper_state_sm" class="Gripper_StateSM" />
+	<tagstring>Gripper</tagstring>
+	<author>Alessio</author>
+	<date>Thu Apr 27 2017</date>
+	<description>
+		Ciao
+	</description>
+
+
+	<!-- Contained Behaviors -->
+
+	<!-- Available Parameters -->
+
+</behavior>

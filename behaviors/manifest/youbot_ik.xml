@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<behavior name="Youbot IK">
+
+	<executable package_path="flexbe_behaviors.youbot_ik_sm" class="YoubotIKSM" />
+	<tagstring>inverse kinematics youbot ik</tagstring>
+	<author>Alessio Caporali</author>
+	<date>Sat Apr 08 2017</date>
+	<description>
+		Invese Kinematics State Machine for the Kuka Youbot
+	</description>
+
+
+	<!-- Contained Behaviors -->
+	<contains name="Test" />
+
+	<!-- Available Parameters -->
+
+</behavior>

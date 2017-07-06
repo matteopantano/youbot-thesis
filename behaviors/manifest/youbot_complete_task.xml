@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<behavior name="Youbot Complete Task">
+
+	<executable package_path="flexbe_behaviors.youbot_complete_task_sm" class="YoubotCompleteTaskSM" />
+	<tagstring>inverse kinematics youbot ik navigation last</tagstring>
+	<author>Matteo Pantano</author>
+	<date>Sat Apr 08 2017</date>
+	<description>
+		YouBot complete task, from searching cube to disposing it on its home position
+	</description>
+
+
+	<!-- Contained Behaviors -->
+	<contains name="Random positions" />
+	<contains name="Youbot Arm Manipulation" />
+
+	<!-- Available Parameters -->
+
+</behavior>
