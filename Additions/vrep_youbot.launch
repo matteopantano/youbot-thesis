@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+	<!-- send youbot urdf to param server -->
+	<param name="use_sim_time" value="true" />
+  	<param name="robot_description" command="$(find xacro)/xacro.py '$(find youbot_description)/robots/youbot.urdf.xacro'"/>
+
+	<node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" output="screen"/>
+
+	<node pkg="tf" type="static_transform_publisher" name="depth_sensor" args="0 0 0 0 0 1.22 kinect_depth_optical_frame kinect_depthSensor 100"/>
+	<node pkg="tf" type="static_transform_publisher" name="vision_sensor" args="0 0 0 0 0 1.22 kinect_rgb_optical_frame kinect_visionSensor 100"/>
+        <node pkg="tf" type="static_transform_publisher" name="end_effector_tf" args="0 0 0.176 0 0 0 arm_link_4 end_effector 100" />
+
+</launch>
